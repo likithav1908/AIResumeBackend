@@ -2,13 +2,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from werkzeug.utils import secure_filename
-from pdf_service import PDFService
+from pdf.pdf_service import PDFService
 from database.database_service import DatabaseService
 from tasks import process_resume_background, batch_score_resumes, calculate_resume_ranking
-from job_service import JobService
-from ats_service import ATSService
-from nlp_service import NLPService
-from embedding_service import EmbeddingService
+from job.job_service import JobService
+from ats.ats_service import ATSService
+from nlp.nlp_service import NLPService
+from nlp.embedding_service import EmbeddingService
 
 app = Flask(__name__)
 
@@ -361,7 +361,7 @@ def batch_score():
         resume_ids = data.get('resume_ids', [])
         
         # Generate embedding for job description
-        from embedding_service import EmbeddingService
+        from nlp.embedding_service import EmbeddingService
         embedding_service = EmbeddingService()
         job_embedding_result = embedding_service.generate_embedding(job_description)
         

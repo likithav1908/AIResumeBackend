@@ -1,0 +1,336 @@
+# Database Service Implementation Notes
+
+## Overview
+The database service handles all data persistence operations for the AI Resume Backend using SQLite database.
+
+## Database Schema
+
+### Tables Created
+
+#### 1. resumes
+Stores uploaded resume data and processing results
+- id (INTEGER PRIMARY KEY): Unique resume identifier
+- filename (TEXT): Original PDF filename
+- text_content (TEXT): Extracted text from PDF
+- skills (TEXT): JSON array of extracted skills
+- keywords (TEXT): JSON array of extracted keywords
+- embedding (TEXT): JSON array of text embedding vector
+- ats_score (REAL): ATS calculated score
+- created_at (TIMESTAMP): Upload timestamp
+- processed_at (TIMESTAMP): Processing completion timestamp
+
+#### 2. job_descriptions
+Stores job postings for matching
+- id (INTEGER PRIMARY KEY): Unique job identifier
+- job_title (TEXT): Job position title
+- company (TEXT): Company name
+- location (TEXT): Job location
+- description (TEXT): Full job description
+- requirements (TEXT): Job requirements
+- salary_min (INTEGER): Minimum salary
+- salary_max (INTEGER): Maximum salary
+- job_type (TEXT): Employment type (Full-time, Part-time)
+- experience_level (TEXT): Required experience level
+- posted_date (DATE): Job posting date
+- embedding (TEXT): JSON array of job description embedding
+
+#### 3. resume_jobs
+Many-to-many relationship between resumes and jobs
+- id (INTEGER PRIMARY KEY): Unique match identifier
+- resume_id (INTEGER): Foreign key to resumes table
+- job_id (INTEGER): Foreign key to job_descriptions table
+- match_score (REAL): Similarity score between resume and job
+- created_at (TIMESTAMP): Match calculation timestamp
+
+---
+
+## database_service.py - Line by Line Explanation
+
+### Imports and Initialization
+```python
+import sqlite3
+import json
+import os
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+```
+- sqlite3: Python's built-in SQLite database interface
+- json: For serializing/deserializing JSON data (skills, embeddings)
+- os: File system operations for database file management
+- typing: Type hints for better code documentation
+- datetime: Timestamp generation for record tracking
+
+```python
+class DatabaseService:
+    def __init__(self, db_path='database/resume_database.db'):
+        self.db_path = db_path
+        self.init_database()
+```
+- DatabaseService class constructor
+- db_path: Path to SQLite database file (default: database/resume_database.db)
+- Calls init_database() to create tables if they don't exist
+
+### Database Initialization
+```python
+def init_database(self):
+    """Initialize database with required tables"""
+    conn = sqlite3.connect(self.db_path)
+    cursor = conn.cursor()
+```
+- Creates database connection
+- Gets cursor for executing SQL commands
+
+```python
+# Create resumes table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS resumes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        text_content TEXT,
+        skills TEXT,
+        keywords TEXT,
+        embedding TEXT,
+        ats_score REAL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP
+    )
+''')
+```
+- Creates resumes table if it doesn't exist
+- id: Auto-incrementing primary key
+- filename: Original PDF filename (required)
+- text_content: Extracted resume text
+- skills: JSON string of skills array
+- keywords: JSON string of keywords array
+- embedding: JSON string of embedding vector
+- ats_score: Calculated ATS score
+- created_at: Auto-generated timestamp
+- processed_at: When processing completed
+
+```python
+# Create job_descriptions table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS job_descriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_title TEXT NOT NULL,
+        company TEXT,
+        location TEXT,
+        description TEXT,
+        requirements TEXT,
+        salary_min INTEGER,
+        salary_max INTEGER,
+        job_type TEXT,
+        experience_level TEXT,
+        posted_date DATE,
+        embedding TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+''')
+```
+- Creates job_descriptions table
+- Stores job posting information
+- embedding: JSON string of job description embedding for matching
+
+```python
+# Create resume_jobs table
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS resume_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resume_id INTEGER,
+        job_id INTEGER,
+        match_score REAL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (resume_id) REFERENCES resumes(id),
+        FOREIGN KEY (job_id) REFERENCES job_descriptions(id)
+    )
+''')
+```
+- Creates junction table for resume-job relationships
+- Foreign keys ensure data integrity
+- match_score: Similarity score between resume and job
+
+### Resume Operations
+```python
+def save_resume(self, resume_data: Dict) -> int:
+    """Save resume data to database"""
+    conn = sqlite3.connect(self.db_path)
+    cursor = conn.cursor()
+```
+- Saves resume data and returns the generated ID
+- Takes dictionary with resume information
+
+```python
+cursor.execute('''
+    INSERT INTO resumes (filename, text_content, skills, keywords, embedding, ats_score, processed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+''', (
+    resume_data['filename'],
+    resume_data.get('text_content'),
+    json.dumps(resume_data.get('skills', [])),
+    json.dumps(resume_data.get('keywords', [])),
+    json.dumps(resume_data.get('embedding', [])),
+    resume_data.get('ats_score'),
+    datetime.now().isoformat()
+))
+```
+- Inserts resume record with all fields
+- json.dumps() converts lists to JSON strings for storage
+- datetime.now() records processing completion time
+
+```python
+resume_id = cursor.lastrowid
+conn.commit()
+conn.close()
+return resume_id
+```
+- Gets the auto-generated ID
+- Commits transaction to save changes
+- Closes connection
+- Returns ID for reference
+
+### Job Operations
+```python
+def save_job(self, job_data: Dict) -> int:
+    """Save job description to database"""
+```
+- Similar to save_resume but for job descriptions
+- Returns generated job ID
+
+```python
+def get_all_jobs(self) -> List[Dict]:
+    """Get all job descriptions"""
+    conn = sqlite3.connect(self.db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM job_descriptions ORDER BY posted_date DESC')
+    rows = cursor.fetchall()
+```
+- Retrieves all job descriptions
+- Ordered by posting date (newest first)
+
+```python
+jobs = []
+for row in rows:
+    jobs.append({
+        'id': row[0],
+        'job_title': row[1],
+        'company': row[2],
+        'location': row[3],
+        'description': row[4],
+        'requirements': row[5],
+        'salary_min': row[6],
+        'salary_max': row[7],
+        'job_type': row[8],
+        'experience_level': row[9],
+        'posted_date': row[10],
+        'embedding': json.loads(row[11]) if row[11] else []
+    })
+```
+- Converts database rows to dictionaries
+- json.loads() converts JSON strings back to Python objects
+
+### Search and Matching Operations
+```python
+def search_resumes(self, query: str, limit: int = 10) -> List[Dict]:
+    """Search resumes by text content"""
+    conn = sqlite3.connect(self.db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM resumes 
+        WHERE text_content LIKE ? 
+        ORDER BY ats_score DESC 
+        LIMIT ?
+    ''', (f'%{query}%', limit))
+```
+- Searches resumes using SQL LIKE operator
+- Returns results ordered by ATS score
+- Limits number of results
+
+```python
+def save_resume_job_match(self, resume_id: int, job_id: int, match_score: float):
+    """Save resume-job match with similarity score"""
+    cursor.execute('''
+        INSERT INTO resume_jobs (resume_id, job_id, match_score)
+        VALUES (?, ?, ?)
+    ''', (resume_id, job_id, match_score))
+```
+- Stores similarity score between resume and job
+- Used for job matching functionality
+
+### Utility Methods
+```python
+def get_resume_by_id(self, resume_id: int) -> Optional[Dict]:
+    """Get resume by ID"""
+```
+- Retrieves single resume by its ID
+- Returns None if not found
+
+```python
+def get_job_matches_for_resume(self, resume_id: int, limit: int = 5) -> List[Dict]:
+    """Get top job matches for a resume"""
+    cursor.execute('''
+        SELECT jd.*, rj.match_score
+        FROM job_descriptions jd
+        JOIN resume_jobs rj ON jd.id = rj.job_id
+        WHERE rj.resume_id = ?
+        ORDER BY rj.match_score DESC
+        LIMIT ?
+    ''', (resume_id, limit))
+```
+- Gets best matching jobs for a resume
+- Joins tables to get job details with match scores
+- Ordered by similarity score (highest first)
+
+## How Database Service Works
+
+### Connection Management
+- Each method opens its own database connection
+- Connections are properly closed after operations
+- Transactions are committed for data consistency
+
+### Data Serialization
+- Lists (skills, keywords, embeddings) stored as JSON strings
+- Retrieved data is deserialized back to Python objects
+- Allows storage of complex data structures in SQLite
+
+### Error Handling
+- Basic error handling through try-catch blocks
+- Database operations wrapped in transactions
+- Foreign key constraints ensure data integrity
+
+### Performance Considerations
+- SQLite is file-based, suitable for development/small scale
+- For production, consider PostgreSQL or MySQL
+- Indexes could be added for better search performance
+
+## Usage Examples
+
+### Saving a Resume
+```python
+db_service = DatabaseService()
+resume_data = {
+    'filename': 'resume.pdf',
+    'text_content': 'John Doe\nSoftware Engineer...',
+    'skills': ['Python', 'React', 'AWS'],
+    'keywords': ['development', 'engineering'],
+    'embedding': [0.1, 0.2, 0.3],
+    'ats_score': 85.5
+}
+resume_id = db_service.save_resume(resume_data)
+```
+
+### Finding Job Matches
+```python
+matches = db_service.get_job_matches_for_resume(resume_id)
+for match in matches:
+    print(f"Job: {match['job_title']}, Score: {match['match_score']}")
+```
+
+## Key Features
+- **Persistent Storage**: All data saved to SQLite database
+- **Type Safety**: Proper data types for each field
+- **Relationships**: Foreign keys maintain data integrity
+- **Flexibility**: JSON storage for complex data
+- **Search Capability**: Text search and similarity matching
+- **Timestamps**: Automatic tracking of creation/processing times

@@ -1,0 +1,197 @@
+# Celery Configuration Notes
+
+## Overview
+Celery is used for background task processing to handle heavy operations like resume processing without blocking the main API.
+
+## Files in this Directory
+
+### 1. celery_app.py
+Main Celery configuration file that sets up the background task system.
+
+### 2. celery_worker.py
+Worker startup script that runs the Celery worker process.
+
+---
+
+## celery_app.py - Line by Line Explanation
+
+```python
+from celery import Celery
+```
+- Imports the Celery class from the celery library
+- Celery is the main class for creating distributed task queues
+
+```python
+import os
+```
+- Imports the os module for environment variable access
+- Used to get Redis configuration from environment
+
+```python
+# Redis configuration
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+```
+- Gets Redis URL from environment variable REDIS_URL
+- Falls back to default 'redis://localhost:6379/0' if not set
+- Redis is used as message broker and result backend
+
+```python
+# Create Celery instance
+celery_app = Celery(
+    'resume_processor',
+    broker=REDIS_URL,
+    backend=REDIS_URL,
+    include=['tasks']
+)
+```
+- Creates Celery application instance named 'resume_processor'
+- broker: Redis URL for task queue (where tasks are stored)
+- backend: Redis URL for task results (where results are stored)
+- include: List of modules to import when Celery starts (tasks.py)
+
+```python
+# Configure Celery
+celery_app.conf.update(
+    task_serializer='json',
+```
+- Sets task serialization format to JSON
+- Ensures tasks are sent as JSON messages
+
+```python
+    accept_content=['json'],
+```
+- Only accepts JSON content for tasks
+- Security measure to prevent execution of malicious content
+
+```python
+    result_serializer='json',
+```
+- Sets result serialization format to JSON
+- Task results stored as JSON in Redis
+
+```python
+    timezone='UTC',
+```
+- Sets timezone to UTC for all tasks
+- Ensures consistent time handling across servers
+
+```python
+    enable_utc=True,
+```
+- Enables UTC timezone support
+- All datetime objects will be treated as UTC
+
+```python
+    task_track_started=True,
+```
+- Enables tracking of when tasks start
+- Allows monitoring of task progress
+
+```python
+    task_time_limit=300,  # 5 minutes
+```
+- Hard limit for task execution time (300 seconds)
+- Task will be killed if it exceeds this limit
+
+```python
+    task_soft_time_limit=240,  # 4 minutes
+```
+- Soft limit for task execution (240 seconds)
+- Task gets warning signal but can finish gracefully
+
+```python
+    worker_prefetch_multiplier=1,
+```
+- Number of tasks each worker prefetches
+- Set to 1 to prevent workers from taking too many tasks
+
+```python
+    worker_max_tasks_per_child=1000,
+```
+- Maximum tasks a worker process can handle before restart
+- Prevents memory leaks in long-running workers
+
+```python
+)
+```
+- Closes the configuration update call
+
+---
+
+## celery_worker.py - Line by Line Explanation
+
+```python
+#!/usr/bin/env python3
+```
+- Shebang line to specify Python 3 interpreter
+- Allows direct execution: ./celery_worker.py
+
+```python
+import os
+import sys
+```
+- Imports os and sys modules
+- Used for system operations and path manipulation
+
+```python
+from celery import Celery
+```
+- Imports Celery class (not used directly but good practice)
+
+```python
+from celery_config.celery_app import celery_app
+```
+- Imports the configured Celery app
+- Uses the app configured in celery_app.py
+
+```python
+if __name__ == '__main__':
+```
+- Main execution block
+- Code runs only when script is executed directly
+
+```python
+    # Start Celery worker
+    celery_app.start(['worker', '--loglevel=info'])
+```
+- Starts Celery worker process
+- 'worker': Command to start worker
+- '--loglevel=info': Sets logging to info level
+
+---
+
+## How Celery Works in This Project
+
+### Task Flow
+1. API endpoint receives request (e.g., resume upload)
+2. Instead of processing immediately, creates a Celery task
+3. Task is placed in Redis queue
+4. Worker process picks up task from queue
+5. Worker processes task (resume parsing, scoring, etc.)
+6. Results stored in Redis
+7. API can check task status and retrieve results
+
+### Key Benefits
+- **Non-blocking**: API remains responsive during heavy processing
+- **Scalable**: Multiple workers can process tasks in parallel
+- **Reliable**: Tasks are persisted in Redis (no data loss)
+- **Monitorable**: Task status and results can be tracked
+
+### Example Usage
+```python
+# In tasks.py
+@celery_app.task
+def process_resume_background(resume_id):
+    # Heavy processing here
+    return result
+
+# In server.py
+task = process_resume_background.delay(resume_id)
+# Returns immediately, task runs in background
+```
+
+### Configuration Notes
+- Redis must be running for Celery to work
+- Default Redis URL: redis://localhost:6379/0
+- Tasks timeout after 5 minutes to prevent hanging
+- Workers restart every 1000 tasks to prevent memory leaks

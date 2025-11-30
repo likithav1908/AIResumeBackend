@@ -1,8 +1,8 @@
 import PyPDF2
 import os
 from werkzeug.utils import secure_filename
-from nlp_service import NLPService
-from embedding_service import EmbeddingService
+from nlp.nlp_service import NLPService
+from nlp.embedding_service import EmbeddingService
 from database.database_service import DatabaseService
 
 class PDFService:

@@ -1,12 +1,12 @@
 from celery import Celery
-from celery_app import celery_app
+from celery_config.celery_app import celery_app
 import math
 from database.database_service import DatabaseService
-from embedding_service import EmbeddingService
-from nlp_service import NLPService
-from ats_service import ATSService
-from pdf_service import PDFService
-from job_service import JobService
+from nlp.embedding_service import EmbeddingService
+from nlp.nlp_service import NLPService
+from ats.ats_service import ATSService
+from pdf.pdf_service import PDFService
+from job.job_service import JobService
 import logging
 
 # Configure logging

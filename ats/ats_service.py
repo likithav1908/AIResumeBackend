@@ -4,8 +4,8 @@ import re
 import logging
 from typing import Dict, List, Tuple
 from database.database_service import DatabaseService
-from nlp_service import NLPService
-from embedding_service import EmbeddingService
+from nlp.nlp_service import NLPService
+from nlp.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 

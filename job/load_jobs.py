@@ -2,7 +2,7 @@
 import csv
 import json
 from database.database_service import DatabaseService
-from embedding_service import EmbeddingService
+from nlp.embedding_service import EmbeddingService
 
 def load_sample_jobs():
     """Load sample jobs from CSV into database"""

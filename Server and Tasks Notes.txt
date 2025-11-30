@@ -1,0 +1,707 @@
+# Server and Tasks Implementation Notes
+
+## Overview
+The server.py file contains the Flask API endpoints that handle HTTP requests, while tasks.py contains Celery background tasks for heavy processing operations.
+
+---
+
+## server.py - Line by Line Explanation
+
+### Imports and Configuration
+```python
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import os
+from werkzeug.utils import secure_filename
+```
+- Flask: Main web framework for creating API endpoints
+- flask_cors: Enables cross-origin requests from frontend
+- os: File system operations and environment variables
+- werkzeug.utils.secure_filename: Sanitizes uploaded filenames
+
+```python
+from pdf.pdf_service import PDFService
+from database.database_service import DatabaseService
+from tasks import process_resume_background, batch_score_resumes, calculate_resume_ranking
+from job.job_service import JobService
+from ats.ats_service import ATSService
+from nlp.nlp_service import NLPService
+from nlp.embedding_service import EmbeddingService
+```
+- Imports all service classes for business logic
+- Imports background task functions from tasks.py
+- Organized imports by service categories
+
+```python
+app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app)
+```
+- Creates Flask application instance
+- Enables CORS for all endpoints (allows frontend access)
+
+```python
+# Configure upload folder
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+```
+- Sets upload directory for file storage
+- Limits file uploads to 16MB to prevent abuse
+
+### Health Check Endpoint
+```python
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'message': 'AI Resume Backend is running',
+        'version': '1.0.0'
+    })
+```
+- Simple health check for monitoring
+- Returns JSON with service status
+- Useful for load balancers and monitoring
+
+### Resume Upload Endpoint
+```python
+@app.route('/upload-resume', methods=['POST'])
+def upload_resume():
+    """Upload and process resume PDF"""
+    try:
+        # Check if file is in request
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+```
+- Handles POST requests to /upload-resume
+- Validates file is present in request
+- Returns 400 error if file missing
+
+```python
+file = request.files['file']
+if file.filename == '':
+    return jsonify({'error': 'No file selected'}), 400
+```
+- Gets file from request
+- Checks if filename is not empty
+- Returns error if no file selected
+
+```python
+# Validate PDF file
+pdf_service = PDFService()
+is_valid, message = pdf_service.validate_pdf_file(file)
+if not is_valid:
+    return jsonify({'error': message}), 400
+```
+- Creates PDF service instance
+- Validates uploaded file
+- Returns error if validation fails
+
+```python
+# Save uploaded file
+filename = secure_filename(file.filename)
+filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+file.save(filepath)
+```
+- Sanitizes filename for security
+- Creates full file path
+- Creates upload directory if needed
+- Saves file to disk
+
+```python
+# Process resume in background
+task = process_resume_background.delay(filepath, filename)
+return jsonify({
+    'message': 'Resume uploaded successfully',
+    'task_id': task.id,
+    'filename': filename
+}), 202
+```
+- Starts background processing task
+- Returns task ID for status checking
+- 202 status indicates processing started
+
+### Task Status Endpoint
+```python
+@app.route('/task-status/<task_id>', methods=['GET'])
+def get_task_status(task_id):
+    """Get status of background task"""
+    try:
+        task = process_resume_background.AsyncResult(task_id)
+        
+        if task.state == 'PENDING':
+            response = {
+                'state': task.state,
+                'status': 'Task is waiting to be processed'
+            }
+        elif task.state == 'PROGRESS':
+            response = {
+                'state': task.state,
+                'status': task.info.get('status', ''),
+                'progress': task.info.get('progress', 0)
+            }
+        elif task.state == 'SUCCESS':
+            response = {
+                'state': task.state,
+                'result': task.result
+            }
+        else:  # FAILURE
+            response = {
+                'state': task.state,
+                'error': str(task.info)
+            }
+        
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Checks status of background tasks
+- Handles different task states (PENDING, PROGRESS, SUCCESS, FAILURE)
+- Returns appropriate response for each state
+- Includes progress information for long-running tasks
+
+### Resume List Endpoint
+```python
+@app.route('/resumes', methods=['GET'])
+def get_resumes():
+    """Get all processed resumes"""
+    try:
+        db_service = DatabaseService()
+        resumes = db_service.get_all_resumes()
+        return jsonify({'resumes': resumes})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Retrieves all processed resumes from database
+- Returns JSON array of resume data
+- Handles database errors gracefully
+
+### Resume Details Endpoint
+```python
+@app.route('/resume/<int:resume_id>', methods=['GET'])
+def get_resume(resume_id):
+    """Get specific resume by ID"""
+    try:
+        db_service = DatabaseService()
+        resume = db_service.get_resume_by_id(resume_id)
+        
+        if not resume:
+            return jsonify({'error': 'Resume not found'}), 404
+        
+        return jsonify({'resume': resume})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Gets single resume by ID
+- Returns 404 if resume not found
+- Includes full resume details
+
+### Jobs Endpoints
+```python
+@app.route('/jobs', methods=['GET'])
+def get_jobs():
+    """Get all job descriptions"""
+    try:
+        job_service = JobService()
+        jobs = job_service.get_all_jobs()
+        return jsonify({'jobs': jobs})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Retrieves all available jobs
+- Uses job service for data access
+
+```python
+@app.route('/jobs/search', methods=['GET'])
+def search_jobs():
+    """Search jobs by query"""
+    try:
+        query = request.args.get('q', '')
+        limit = int(request.args.get('limit', 10))
+        
+        job_service = JobService()
+        jobs = job_service.search_jobs(query, limit)
+        return jsonify({'jobs': jobs})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Searches jobs by text query
+- Supports limit parameter for pagination
+- Uses query parameter 'q' for search term
+
+### Resume-Job Matching Endpoint
+```python
+@app.route('/resume/<int:resume_id>/matches', methods=['GET'])
+def get_resume_matches(resume_id):
+    """Get job matches for a resume"""
+    try:
+        db_service = DatabaseService()
+        resume = db_service.get_resume_by_id(resume_id)
+        
+        if not resume:
+            return jsonify({'error': 'Resume not found'}), 404
+```
+- Gets job matches for specific resume
+- Validates resume exists first
+- Returns 404 if resume not found
+
+```python
+        job_service = JobService()
+        matches = job_service.match_resume_to_jobs(resume['text_content'], limit=5)
+        return jsonify({'matches': matches})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Uses job service for matching logic
+- Limits results to top 5 matches
+- Returns similarity scores and match reasons
+
+### Batch Scoring Endpoint
+```python
+@app.route('/batch-score', methods=['POST'])
+def batch_score_resumes_endpoint():
+    """Batch score resumes against job description"""
+    try:
+        data = request.get_json()
+        if not data or 'job_description' not in data:
+            return jsonify({'error': 'Job description required'}), 400
+```
+- Handles batch scoring requests
+- Validates JSON input contains job description
+- Returns error if missing required data
+
+```python
+        job_description = data['job_description']
+        resume_ids = data.get('resume_ids', [])
+        
+        # Generate embedding for job description
+        from nlp.embedding_service import EmbeddingService
+        embedding_service = EmbeddingService()
+        job_embedding_result = embedding_service.generate_embedding(job_description)
+```
+- Extracts job description and optional resume IDs
+- Generates embedding for job description
+- Uses embedding service for similarity calculation
+
+```python
+        if 'embedding' not in job_embedding_result:
+            return jsonify({'error': 'Failed to generate job description embedding'}), 500
+        
+        job_embedding = job_embedding_result['embedding']
+        
+        # Start batch scoring task
+        task = batch_score_resumes.delay(job_embedding, resume_ids)
+        return jsonify({
+            'message': 'Batch scoring started',
+            'task_id': task.id
+        }), 202
+```
+- Validates embedding was generated successfully
+- Starts background task for batch processing
+- Returns task ID for status tracking
+
+### Resume Ranking Endpoint
+```python
+@app.route('/calculate-ranking', methods=['POST'])
+def calculate_resume_ranking_endpoint():
+    """Calculate ranking for all resumes against job"""
+    try:
+        data = request.get_json()
+        if not data or 'job_description' not in data:
+            return jsonify({'error': 'Job description required'}), 400
+```
+- Calculates ranking for all resumes
+- Similar to batch scoring but processes all resumes
+- Validates input data
+
+```python
+        job_description = data['job_description']
+        
+        # Start ranking calculation task
+        task = calculate_resume_ranking.delay(job_description)
+        return jsonify({
+            'message': 'Resume ranking calculation started',
+            'task_id': task.id
+        }), 202
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+- Starts background task for ranking calculation
+- Returns task ID for progress tracking
+
+### Server Startup
+```python
+if __name__ == '__main__':
+    # Create upload directory if it doesn't exist
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    
+    # Run Flask development server
+    app.run(debug=True, host='0.0.0.0', port=5000)
+```
+- Creates upload directory on startup
+- Runs Flask development server
+- Debug mode enabled for development
+- Host 0.0.0.0 allows external access
+
+---
+
+## tasks.py - Line by Line Explanation
+
+### Imports and Configuration
+```python
+from celery import Celery
+from celery_config.celery_app import celery_app
+import math
+from database.database_service import DatabaseService
+from nlp.embedding_service import EmbeddingService
+from nlp.nlp_service import NLPService
+from ats.ats_service import ATSService
+from pdf.pdf_service import PDFService
+from job.job_service import JobService
+import logging
+```
+- Celery: Background task framework
+- celery_app: Configured Celery instance
+- math: Mathematical operations for scoring
+- All service classes for business logic
+- logging: Task execution logging
+
+```python
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+```
+- Sets up logging for task monitoring
+- INFO level provides good balance of detail
+
+### Service Initialization
+```python
+# Initialize services
+db_service = DatabaseService()
+embedding_service = EmbeddingService()
+nlp_service = NLPService()
+ats_service = ATSService()
+pdf_service = PDFService()
+job_service = JobService()
+```
+- Global service instances for task reuse
+- Created once to improve performance
+- Shared across all task executions
+
+### Resume Processing Task
+```python
+@celery_app.task(bind=True)
+def process_resume_background(self, filepath, filename):
+    """Process resume PDF in background"""
+    try:
+        # Update task status
+        self.update_state(state='PROGRESS', meta={'status': 'Starting resume processing...', 'progress': 0})
+```
+- Background task for resume processing
+- bind=True allows task state updates
+- Updates status to show progress to user
+
+```python
+        # Extract text from PDF
+        self.update_state(state='PROGRESS', meta={'status': 'Extracting text from PDF...', 'progress': 20})
+        text_content = pdf_service.extract_text_from_pdf(filepath)
+        
+        if not text_content.strip():
+            return {'error': 'Could not extract text from PDF', 'success': False}
+```
+- Updates progress to 20%
+- Extracts text using PDF service
+- Validates extraction was successful
+
+```python
+        # Extract skills and keywords
+        self.update_state(state='PROGRESS', meta={'status': 'Analyzing resume content...', 'progress': 40})
+        nlp_result = nlp_service.extract_skills_and_keywords(text_content)
+        skills = nlp_result.get('SKILL', [])
+        keywords = nlp_result.get('KEYWORDS', [])
+```
+- Updates progress to 40%
+- Runs NLP analysis on extracted text
+- Extracts skills and keywords for scoring
+
+```python
+        # Generate embedding
+        self.update_state(state='PROGRESS', meta={'status': 'Generating text embedding...', 'progress': 60})
+        embedding_result = embedding_service.generate_embedding(text_content)
+        embedding = embedding_result.get('embedding', [])
+```
+- Updates progress to 60%
+- Generates embedding vector for text
+- Used for job matching and similarity
+
+```python
+        # Calculate ATS score
+        self.update_state(state='PROGRESS', meta={'status': 'Calculating ATS score...', 'progress': 80})
+        ats_score = ats_service.calculate_ats_score({
+            'text_content': text_content,
+            'skills': skills,
+            'keywords': keywords
+        })
+```
+- Updates progress to 80%
+- Calculates comprehensive ATS score
+- Uses ATS service for detailed analysis
+
+```python
+        # Save to database
+        self.update_state(state='PROGRESS', meta={'status': 'Saving to database...', 'progress': 90})
+        resume_data = {
+            'filename': filename,
+            'text_content': text_content,
+            'skills': skills,
+            'keywords': keywords,
+            'embedding': embedding,
+            'ats_score': ats_score.get('final_score', 0)
+        }
+        
+        resume_id = db_service.save_resume(resume_data)
+```
+- Updates progress to 90%
+- Prepares complete resume data
+- Saves to database and gets ID
+
+```python
+        # Clean up uploaded file
+        try:
+            os.remove(filepath)
+        except:
+            pass  # Ignore cleanup errors
+```
+- Removes uploaded PDF file after processing
+- Prevents disk space issues
+- Ignores cleanup errors
+
+```python
+        # Find job matches
+        self.update_state(state='PROGRESS', meta={'status': 'Finding job matches...', 'progress': 95})
+        matches = job_service.match_resume_to_jobs(text_content, limit=5)
+        
+        # Save matches to database
+        for match in matches:
+            db_service.save_resume_job_match(resume_id, match['job']['id'], match['similarity_score'])
+```
+- Updates progress to 95%
+- Finds matching jobs using job service
+- Saves matches to database for future reference
+
+```python
+        return {
+            'resume_id': resume_id,
+            'filename': filename,
+            'skills': skills,
+            'keywords': keywords,
+            'ats_score': ats_score.get('final_score', 0),
+            'ats_breakdown': ats_score,
+            'matches': matches,
+            'success': True
+        }
+    except Exception as e:
+        logger.error(f"Error processing resume: {e}")
+        return {'error': str(e), 'success': False}
+```
+- Returns complete processing results
+- Includes all extracted and calculated data
+- Handles errors gracefully with logging
+
+### Batch Scoring Task
+```python
+@celery_app.task(bind=True)
+def batch_score_resumes(self, job_embedding, resume_ids):
+    """Batch score resumes against job embedding"""
+    try:
+        self.update_state(state='PROGRESS', meta={'status': 'Loading resumes...', 'progress': 10})
+        
+        # Get resumes to score
+        if resume_ids:
+            resumes = []
+            for resume_id in resume_ids:
+                resume = db_service.get_resume_by_id(resume_id)
+                if resume:
+                    resumes.append(resume)
+        else:
+            resumes = db_service.get_all_resumes()
+```
+- Background task for batch scoring
+- Accepts job embedding and optional resume IDs
+- Loads specific resumes or all resumes
+
+```python
+        self.update_state(state='PROGRESS', meta={'status': 'Calculating similarity scores...', 'progress': 50})
+        
+        results = []
+        total_resumes = len(resumes)
+        
+        for i, resume in enumerate(resumes):
+            # Calculate similarity score
+            if resume.get('embedding'):
+                resume_embedding = resume['embedding']
+                similarity = embedding_service.calculate_similarity(job_embedding, resume_embedding)
+                
+                result = {
+                    'resume_id': resume['id'],
+                    'filename': resume['filename'],
+                    'similarity_score': similarity,
+                    'ats_score': resume.get('ats_score', 0)
+                }
+                results.append(result)
+            
+            # Update progress
+            progress = 50 + (i + 1) / total_resumes * 40
+            self.update_state(state='PROGRESS', meta={'progress': progress})
+```
+- Calculates similarity for each resume
+- Updates progress dynamically
+- Combines similarity with ATS scores
+
+```python
+        # Sort by similarity score
+        results.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        return {
+            'results': results,
+            'total_processed': len(resumes),
+            'success': True
+        }
+    except Exception as e:
+        logger.error(f"Error in batch scoring: {e}")
+        return {'error': str(e), 'success': False}
+```
+- Sorts results by similarity score
+- Returns ranked list of resumes
+- Handles errors with logging
+
+### Resume Ranking Task
+```python
+@celery_app.task(bind=True)
+def calculate_resume_ranking(self, job_description):
+    """Calculate comprehensive ranking for all resumes"""
+    try:
+        self.update_state(state='PROGRESS', meta={'status': 'Generating job embedding...', 'progress': 10})
+        
+        # Generate job embedding
+        job_embedding_result = embedding_service.generate_embedding(job_description)
+        if 'embedding' not in job_embedding_result:
+            return {'error': 'Failed to generate job embedding', 'success': False}
+        
+        job_embedding = job_embedding_result['embedding']
+```
+- Background task for comprehensive ranking
+- Generates embedding for job description
+- Validates embedding generation
+
+```python
+        self.update_state(state='PROGRESS', meta={'status': 'Loading all resumes...', 'progress': 20})
+        resumes = db_service.get_all_resumes()
+        
+        self.update_state(state='PROGRESS', meta={'status': 'Calculating comprehensive scores...', 'progress': 40})
+        
+        ranked_resumes = []
+        total_resumes = len(resumes)
+        
+        for i, resume in enumerate(resumes):
+            # Calculate similarity score (40% weight)
+            similarity_score = 0
+            if resume.get('embedding'):
+                similarity_score = embedding_service.calculate_similarity(job_embedding, resume['embedding'])
+            
+            # Get ATS score (60% weight)
+            ats_score = resume.get('ats_score', 0)
+            
+            # Calculate weighted final score
+            final_score = (similarity_score * 0.4) + (ats_score * 0.6)
+```
+- Combines similarity and ATS scores
+- Uses weighted scoring (40% similarity, 60% ATS)
+- Provides comprehensive ranking
+
+```python
+            ranked_resume = {
+                'resume_id': resume['id'],
+                'filename': resume['filename'],
+                'similarity_score': similarity_score,
+                'ats_score': ats_score,
+                'final_score': final_score,
+                'skills': resume.get('skills', []),
+                'matched_skills': []
+            }
+            
+            # Find matched skills
+            resume_skills = set(resume.get('skills', []))
+            job_skills = set(nlp_service.extract_skills_and_keywords(job_description).get('SKILL', []))
+            matched_skills = resume_skills.intersection(job_skills)
+            ranked_resume['matched_skills'] = list(matched_skills)
+            
+            ranked_resumes.append(ranked_resume)
+            
+            # Update progress
+            progress = 40 + (i + 1) / total_resumes * 50
+            self.update_state(state='PROGRESS', meta={'progress': progress})
+```
+- Creates detailed ranking results
+- Identifies matched skills between resume and job
+- Updates progress dynamically
+
+```python
+        # Sort by final score
+        ranked_resumes.sort(key=lambda x: x['final_score'], reverse=True)
+        
+        return {
+            'ranked_resumes': ranked_resumes,
+            'total_resumes': len(resumes),
+            'job_description': job_description,
+            'success': True
+        }
+    except Exception as e:
+        logger.error(f"Error calculating ranking: {e}")
+        return {'error': str(e), 'success': False}
+```
+- Sorts by final comprehensive score
+- Returns complete ranking results
+- Includes job description for reference
+
+## How Server and Tasks Work Together
+
+### Request Flow
+1. **API Request**: Client sends HTTP request to server
+2. **Validation**: Server validates request parameters
+3. **Task Creation**: Server creates background task for heavy processing
+4. **Immediate Response**: Server returns task ID to client
+5. **Background Processing**: Celery worker processes task asynchronously
+6. **Status Updates**: Client can check task status using task ID
+7. **Result Retrieval**: Client gets final results when task completes
+
+### Benefits of This Architecture
+- **Responsive API**: No blocking operations in HTTP requests
+- **Scalable Processing**: Multiple workers can handle concurrent tasks
+- **Progress Tracking**: Real-time status updates for long operations
+- **Error Isolation**: Task failures don't crash the API server
+- **Resource Management**: Heavy processing isolated from web server
+
+### Task State Management
+- **PENDING**: Task queued but not started
+- **PROGRESS**: Task actively running with progress updates
+- **SUCCESS**: Task completed successfully
+- **FAILURE**: Task failed with error information
+
+### Error Handling Strategy
+- **Validation**: Input validation before task creation
+- **Graceful Degradation**: Tasks continue even if some steps fail
+- **Logging**: Comprehensive error logging for debugging
+- **User Feedback**: Clear error messages in API responses
+
+## Key Features
+- **RESTful API**: Clean HTTP endpoints for all operations
+- **Background Processing**: Non-blocking heavy operations
+- **Progress Tracking**: Real-time task status updates
+- **File Handling**: Secure PDF upload and processing
+- **Comprehensive Analysis**: ATS scoring, skill extraction, job matching
+- **Batch Operations**: Efficient processing of multiple resumes
+- **Error Resilience**: Robust error handling throughout stack

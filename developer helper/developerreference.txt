@@ -18,3 +18,7 @@ source .venv/bin/activate
 
  //load jobs
  python load_jobs.py
+
+
+ //install requirements 
+ pip install -r requirements.txt

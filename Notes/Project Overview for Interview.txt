@@ -1,0 +1,237 @@
+# AI Resume Backend - Project Overview for Interview
+
+## Project Summary
+The AI Resume Backend is a comprehensive system for processing, analyzing, and matching resumes against job descriptions using natural language processing and machine learning techniques.
+
+## Architecture Overview
+
+### Technology Stack
+- **Backend Framework**: Flask (Python)
+- **Database**: SQLite (with potential for PostgreSQL/MySQL upgrade)
+- **Background Processing**: Celery with Redis
+- **PDF Processing**: PyPDF2
+- **NLP**: Custom regex-based implementation (fallback from spaCy)
+- **Embeddings**: Hash-based vector generation (fallback from sentence-transformers)
+- **API**: RESTful endpoints with CORS support
+
+### System Components
+
+#### 1. API Layer (server.py)
+- Flask application with RESTful endpoints
+- Handles file uploads and HTTP requests
+- Integrates with all service layers
+- Provides real-time task status updates
+
+#### 2. Background Processing (tasks.py)
+- Celery tasks for heavy operations
+- Non-blocking resume processing
+- Batch scoring and ranking operations
+- Progress tracking with status updates
+
+#### 3. Service Layer
+- **PDF Service**: Text extraction from PDF files
+- **NLP Service**: Skill and keyword extraction
+- **Embedding Service**: Text vectorization for similarity
+- **ATS Service**: Resume scoring and evaluation
+- **Job Service**: Job posting management and matching
+- **Database Service**: Data persistence and retrieval
+
+#### 4. Data Layer
+- SQLite database with structured schema
+- Tables for resumes, jobs, and matches
+- JSON storage for complex data (skills, embeddings)
+
+## Key Features
+
+### Resume Processing Pipeline
+1. **File Upload**: Secure PDF upload with validation
+2. **Text Extraction**: PyPDF2 extracts text content
+3. **NLP Analysis**: Regex-based skill and keyword extraction
+4. **Embedding Generation**: Hash-based vector creation
+5. **ATS Scoring**: Comprehensive resume evaluation
+6. **Database Storage**: Persistent storage of all results
+7. **Job Matching**: Similarity-based job recommendations
+
+### ATS Scoring System
+- **Format Score (25%)**: Resume structure and organization
+- **Skills Score (30%)**: Technical skill relevance
+- **Experience Score (25%)**: Experience level and relevance
+- **Education Score (10%)**: Educational background
+- **Keyword Score (10%)**: Keyword density and relevance
+
+### Job Matching Algorithm
+- **Text Embeddings**: Vector representation of resumes and jobs
+- **Cosine Similarity**: Mathematical similarity calculation
+- **Skill Matching**: Direct skill overlap analysis
+- **Weighted Scoring**: Combined similarity and ATS scores
+
+## Technical Implementation Details
+
+### Fallback Strategy
+Due to compilation issues with advanced NLP libraries:
+- **spaCy → Regex**: Pattern-based entity extraction
+- **Sentence Transformers → Hash-based**: Custom embedding generation
+- **Maintains functionality** while ensuring deployment reliability
+
+### Database Schema
+```sql
+resumes (id, filename, text_content, skills, keywords, embedding, ats_score, created_at, processed_at)
+job_descriptions (id, job_title, company, location, description, requirements, salary_range, embedding)
+resume_jobs (id, resume_id, job_id, match_score, created_at)
+```
+
+### API Endpoints
+- `POST /upload-resume`: Upload and process resume
+- `GET /task-status/{task_id}`: Check processing status
+- `GET /resumes`: List all processed resumes
+- `GET /jobs`: Get available job postings
+- `POST /batch-score`: Score resumes against job
+- `GET /resume/{id}/matches`: Get job matches for resume
+
+### Background Tasks
+- **process_resume_background**: Complete resume processing pipeline
+- **batch_score_resumes**: Bulk resume scoring
+- **calculate_resume_ranking**: Comprehensive ranking analysis
+
+## Performance Considerations
+
+### Scalability
+- **Horizontal Scaling**: Multiple Celery workers
+- **Database Optimization**: Indexed queries, connection pooling
+- **Caching**: Redis for task queue and results
+- **File Management**: Cleanup of processed files
+
+### Security
+- **File Validation**: Type checking, size limits
+- **Filename Sanitization**: Prevents path traversal
+- **Input Validation**: Comprehensive request validation
+- **Error Handling**: Secure error messages
+
+### Monitoring
+- **Health Checks**: Service availability endpoints
+- **Task Monitoring**: Celery task status tracking
+- **Logging**: Comprehensive error and info logging
+- **Progress Updates**: Real-time processing status
+
+## Development Decisions
+
+### Why Flask?
+- Lightweight and flexible
+- Easy to extend and modify
+- Good for REST APIs
+- Minimal learning curve
+
+### Why Celery?
+- Asynchronous task processing
+- Prevents API blocking
+- Scalable worker architecture
+- Good task monitoring
+
+### Why SQLite?
+- Zero configuration required
+- Good for development and small scale
+- Easy to migrate to PostgreSQL/MySQL
+- Built-in Python support
+
+### Why Custom NLP?
+- Avoids complex dependencies
+- Reliable deployment
+- Sufficient for basic skill extraction
+- Easy to understand and maintain
+
+## Deployment Architecture
+
+### Development Environment
+- Single server deployment
+- SQLite database
+- Redis for Celery
+- Flask development server
+
+### Production Considerations
+- **Web Server**: Gunicorn or uWSGI
+- **Database**: PostgreSQL with connection pooling
+- **Load Balancer**: Nginx or HAProxy
+- **Monitoring**: Prometheus/Grafana
+- **Logging**: ELK stack or similar
+
+## Future Enhancements
+
+### Technical Improvements
+- **Advanced NLP**: Integrate spaCy or transformer models
+- **Better Embeddings**: Use pre-trained language models
+- **Database Upgrade**: PostgreSQL for better performance
+- **Caching Layer**: Redis for frequently accessed data
+
+### Feature Enhancements
+- **User Authentication**: Multi-tenant support
+- **Resume Parsing**: Advanced PDF and DOCX support
+- **Skill Taxonomy**: Standardized skill categorization
+- **Analytics Dashboard**: Processing statistics and insights
+
+### Performance Optimizations
+- **Batch Processing**: Improved bulk operations
+- **Async Database**: Async database drivers
+- **Microservices**: Service decomposition
+- **CDN Integration**: File storage optimization
+
+## Business Value
+
+### Problem Solved
+- **Resume Screening**: Automated initial screening
+- **Job Matching**: Better candidate-job fit
+- **Time Savings**: Reduces manual review time
+- **Consistency**: Standardized evaluation criteria
+
+### Target Users
+- **HR Professionals**: Streamlined hiring process
+- **Recruiters**: Better candidate matching
+- **Job Seekers**: Resume optimization feedback
+- **Companies**: Improved hiring quality
+
+### Metrics for Success
+- **Processing Speed**: Time from upload to results
+- **Match Accuracy**: Quality of job recommendations
+- **User Satisfaction**: Feedback from HR/recruiters
+- **System Reliability**: Uptime and error rates
+
+## Code Quality
+
+### Design Patterns
+- **Service Layer**: Separation of business logic
+- **Repository Pattern**: Database abstraction
+- **Factory Pattern**: Service instantiation
+- **Observer Pattern**: Task status updates
+
+### Code Organization
+- **Modular Structure**: Clear service boundaries
+- **Dependency Injection**: Service dependencies
+- **Error Handling**: Comprehensive exception management
+- **Testing**: Unit and integration test coverage
+
+### Documentation
+- **Code Comments**: Inline explanations
+- **API Documentation**: Endpoint specifications
+- **Architecture Docs**: System design documentation
+- **Deployment Guides**: Setup and configuration
+
+## Interview Talking Points
+
+### Technical Challenges
+- **NLP Library Issues**: Compilation problems with spaCy
+- **PDF Processing**: Handling various PDF formats
+- **Background Tasks**: Managing long-running operations
+- **Database Design**: Schema for complex data relationships
+
+### Solutions Implemented
+- **Fallback Strategy**: Custom regex-based NLP
+- **Hash Embeddings**: Deterministic vector generation
+- **Progress Tracking**: Real-time task status
+- **JSON Storage**: Flexible data serialization
+
+### Learning Outcomes
+- **System Design**: End-to-end architecture
+- **Async Programming**: Celery and background tasks
+- **NLP Concepts**: Text processing and embeddings
+- **API Design**: RESTful principles and best practices
+
+This project demonstrates full-stack development skills, system design thinking, and practical problem-solving in a real-world application context.

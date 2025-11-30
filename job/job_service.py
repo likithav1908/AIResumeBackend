@@ -4,8 +4,8 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 from database.database_service import DatabaseService
-from embedding_service import EmbeddingService
-from nlp_service import NLPService
+from nlp.embedding_service import EmbeddingService
+from nlp.nlp_service import NLPService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

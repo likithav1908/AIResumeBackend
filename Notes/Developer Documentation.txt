@@ -1,0 +1,59 @@
+# AI Resume Backend
+
+Project Name: AI Resume Backend
+
+## Workflow
+
+### 1. Resume Upload
+Files: server.py
+Libraries: Flask, Werkzeug
+How it works: Flask API endpoint receives PDF file upload
+Example: POST /upload-resume with multipart/form-data
+
+### 2. Text Extraction
+Files: pdf/pdf_service.py
+Libraries: PyPDF2
+How it works: Opens PDF file and extracts text from each page
+Example: "John Doe\nSoftware Engineer\nExperience: 5 years..."
+
+### 3. NLP Processing
+Files: nlp/nlp_service.py
+Libraries: re (regex)
+How it works: Uses regex patterns to extract skills and keywords
+Example: Extracts "Python", "React", "AWS" from resume text
+
+### 4. Embedding Generation
+Files: nlp/embedding_service.py
+Libraries: hashlib, random
+How it works: Creates hash-based embeddings for text similarity
+Example: Converts resume text to 384-dimensional vector [0.1, 0.2, ...]
+
+### 5. Database Storage
+Files: database/database_service.py
+Libraries: sqlite3
+How it works: Stores resume data and embeddings in SQLite database
+Example: INSERT INTO resumes (id, text, embedding) VALUES (1, '...', '[...]')
+
+### 6. ATS Scoring
+Files: ats/ats_service.py
+Libraries: math, re
+How it works: Calculates scores based on format, skills, experience
+Example: format_score: 85, skills_score: 90, experience_score: 75
+
+### 7. Background Processing
+Files: celery/celery_app.py, tasks.py
+Libraries: Celery, Redis
+How it works: Async task processing for heavy operations
+Example: process_resume_background.delay(resume_id)
+
+### 8. Job Matching
+Files: job/job_service.py
+Libraries: csv
+How it works: Matches resume against job descriptions using embeddings
+Example: Similarity score: 0.85 between resume and job posting
+
+### 9. Results
+Files: server.py
+Libraries: Flask, jsonify
+How it works: Returns JSON response with processed data
+Example: {"resume_id": 1, "score": 85, "skills": ["Python", "React"]}

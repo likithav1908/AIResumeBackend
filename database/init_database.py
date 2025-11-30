@@ -8,7 +8,7 @@ This script creates all necessary tables and indexes.
 import os
 import sys
 from database.database_service import DatabaseService
-from job_service import JobService
+from job.job_service import JobService
 
 def initialize_database():
     """Initialize all database tables"""
