@@ -1,0 +1,45 @@
+title,company,location,description,requirements,salary_min,salary_max,job_type,experience_level,posted_date
+Senior Python Developer,TechCorp,San Francisco CA,"We are looking for an experienced Python developer to join our backend team. You will work on developing scalable APIs and microservices.","Python, Django, PostgreSQL, Redis, Docker, AWS",120000,180000,Full-time,Senior,2024-01-15
+Frontend React Engineer,WebSolutions,New York NY,"Join our frontend team to build amazing user interfaces using React and modern JavaScript.","React, JavaScript, TypeScript, Redux, Jest, CSS",100000,150000,Full-time,Intermediate,2024-01-20
+DevOps Engineer,CloudTech,Austin TX,"Seeking a DevOps engineer to manage our cloud infrastructure and CI/CD pipelines.","AWS, Docker, Kubernetes, Jenkins, Terraform, Linux",110000,160000,Full-time,Senior,2024-01-18
+Data Scientist,DataDriven,Chicago IL,"Analyze large datasets and build machine learning models.","Python, Machine Learning, TensorFlow, pandas, numpy, SQL",130000,190000,Full-time,Senior,2024-01-22
+Full Stack Developer,StartupHub,Boston MA,"Looking for a versatile full stack developer comfortable with both frontend and backend.","JavaScript, Node.js, React, MongoDB, Express, HTML, CSS",95000,140000,Full-time,Intermediate,2024-01-25
+Mobile App Developer,AppCraft,Seattle WA,"Develop iOS and Android apps using React Native or native frameworks.","React Native, iOS, Android, JavaScript, TypeScript",105000,155000,Full-time,Intermediate,2024-01-28
+Machine Learning Engineer,AI Innovations,Mountain View CA,"Deploy and optimize ML models in production.","Python, TensorFlow, PyTorch, Docker, Kubernetes, AWS",140000,200000,Full-time,Senior,2024-01-30
+Backend Java Developer,Enterprise Systems,Dallas TX,"Develop enterprise-level applications and microservices.","Java, Spring Boot, Microservices, PostgreSQL, Redis, Docker",115000,165000,Full-time,Senior,2024-02-01
+QA Engineer,TestPro,Denver CO,"Develop automated testing strategies and ensure product quality.","Python, Selenium, Jest, CI/CD, Agile",85000,120000,Full-time,Intermediate,2024-02-03
+Product Manager,TechLead,Portland OR,"Lead product development with engineering and business teams.","Agile, Scrum, Product Management, Jira, Confluence",110000,160000,Full-time,Intermediate,2024-02-05
+
+Cybersecurity Analyst,SecureNet,Los Angeles CA,"Monitor threats, perform vulnerability scans, and ensure system security.","SIEM, Vulnerability Scanning, Linux, Networking, Security Tools",95000,130000,Full-time,Intermediate,2024-02-06
+Cloud Architect,MetaCloud,San Jose CA,"Design scalable cloud solutions.","AWS, Azure, GCP, Terraform, Kubernetes",150000,210000,Full-time,Senior,2024-02-07
+Network Engineer,NetWave,Houston TX,"Manage network infrastructure and troubleshooting.","Cisco, Networking, Firewalls, Routing, Switching",90000,125000,Full-time,Intermediate,2024-02-08
+UI/UX Designer,DesignFlow,Miami FL,"Create amazing UI and user experiences.","Figma, UX Research, Wireframing, Prototyping",70000,110000,Full-time,Intermediate,2024-02-09
+Data Analyst,InsightPro,Atlanta GA,"Analyze data and build dashboards.","SQL, Excel, Power BI, Tableau, Python",80000,115000,Full-time,Intermediate,2024-02-10
+
+Accountant,FinancialHub,Bangalore India,"Handle accounting operations, reporting, and tax compliance.","Tally, Excel, Accounting Principles, Financial Reporting, GST, Taxation",300000,500000,Full-time,Entry-level,2024-02-10
+Financial Analyst,InvestPro,Mumbai India,"Analyze financial data and create business reports.","Excel, Financial Analysis, Tally, Accounting, Data Analysis, PowerPoint",400000,600000,Full-time,Intermediate,2024-02-12
+Accounts Executive,CorpFinance,Delhi India,"Handle accounts payable/receivable, statements, and daily operations.","Tally, Excel, Accounting, GST, Financial Statements, MS Office",350000,450000,Full-time,Entry-level,2024-02-15
+Tax Consultant,TaxWise,Hyderabad India,"Prepare tax returns and ensure compliance.","Taxation, GST, Income Tax, Tally, Excel, Accounting",450000,700000,Full-time,Intermediate,2024-02-18
+Business Analyst,DataBiz,Chennai India,"Analyze requirements and bridge business to technical teams.","Excel, Data Analysis, Business Analysis, SQL, PowerPoint, Communication",380000,550000,Full-time,Intermediate,2024-02-20
+
+Marketing Executive,BrandLabs,Pune India,"Plan and execute digital marketing campaigns.","Digital Marketing, SEO, Google Ads, Social Media, Analytics",300000,450000,Full-time,Entry-level,2024-02-22
+HR Executive,PeopleFirst,Noida India,"Manage hiring, onboarding, and HR operations.","Recruitment, HR Operations, Employee Relations, Excel, Communication",320000,450000,Full-time,Entry-level,2024-02-23
+Sales Executive,SellPro,Ahmedabad India,"Identify leads, close deals, and achieve sales targets.","Sales, Communication, Negotiation, CRM Tools",280000,420000,Full-time,Entry-level,2024-02-24
+Customer Support Specialist,HelpDeskPlus,Kolkata India,"Assist customers and solve product issues.","Communication, Problem Solving, CRM Tools, Email Support",250000,350000,Full-time,Entry-level,2024-02-25
+Operations Manager,EffiCorp,Jaipur India,"Oversee daily operations, improve workflow efficiency.","Operations Management, Excel, Leadership, MIS Reporting",500000,800000,Full-time,Senior,2024-02-26
+
+HR Trainee,PeopleGrow,Bangalore India,"Assist HR team in recruitment, onboarding, and maintaining employee records.","HR, Recruitment, Documentation, Excel, Communication, Onboarding, MS Office",250000,350000,Full-time,Entry-level,2024-02-27
+HR Executive,RecruitHub,Hyderabad India,"Manage end-to-end hiring process, screen candidates, schedule interviews, and coordinate onboarding.","HR, Recruitment, Communication, Documentation, Excel, MS Office, Time Management",300000,450000,Full-time,Entry-level,2024-02-28
+Operations Assistant,OpStream Solutions,Chennai India,"Support daily operations, coordinate with teams, prepare reports, and maintain documentation.","Operations, Excel, MS Office, Communication, Documentation, Time Management",280000,400000,Full-time,Entry-level,2024-02-28
+Sales Coordinator,SalesSphere,Mumbai India,"Assist sales team with lead follow-ups, CRM updates, preparing reports, and customer coordination.","Sales, Communication, Excel, CRM Tools, MS Office, Documentation",300000,450000,Full-time,Entry-level,2024-03-01
+Back Office Executive,DocuServe,Noida India,"Handle documentation, data entry, record maintenance, and report preparation.","Documentation, Excel, Word, PowerPoint, Data Entry, Communication, MS Office",250000,350000,Full-time,Entry-level,2024-03-01
+Administrative Assistant,OfficePro,Delhi India,"Manage schedules, documentation, internal coordination, and office operations.","MS Office, Communication, Excel, Documentation, Time Management, Coordination",280000,380000,Full-time,Entry-level,2024-03-02
+Customer Support Associate,HelpLine India,Pune India,"Respond to customer queries via email/phone, resolve issues, and maintain logs.","Communication, Problem Solving, MS Office, Documentation, CRM Tools",250000,350000,Full-time,Entry-level,2024-03-02
+Junior Accountant,FinEdge Solutions,Ahmedabad India,"Assist senior accountant with entries, Tally work, invoices, and documentation.","Tally, Accounting Principles, Excel, GST Basics, MS Office, Documentation",300000,420000,Full-time,Entry-level,2024-03-03
+Business Operations Associate,CoreBiz,Jaipur India,"Coordinate with internal teams, manage reports, work on business process documentation.","Operations, Excel, Communication, Documentation, MS Office",320000,450000,Full-time,Entry-level,2024-03-04
+Corporate Management Trainee,FutureCorp,Bangalore India,"Learn corporate processes across HR, operations, and sales departments.","Communication, Time Management, MS Office, Documentation, Operations, Sales",300000,500000,Full-time,Entry-level,2024-03-04
+Executive Assistant,ProAssist Gurgaon India,"Assist senior management with scheduling, documentation, presentations, and reporting.","Excel, PowerPoint, Word, Time Management, Communication, Documentation",300000,450000,Full-time,Entry-level,2024-03-05
+Data Entry Operator,FastDocs,Chennai India,"Enter, update, and validate data in internal systems. Prepare daily reports.","Data Entry, Excel, Word, MS Office, Documentation, Attention to Detail",200000,300000,Full-time,Entry-level,2024-03-05
+Office Documentation Specialist,DocExcel Bangalore India,"Prepare corporate documents, maintain records, generate reports, and support admin team.","Documentation, Excel, Word, MS Office, Time Management, Communication",250000,350000,Full-time,Entry-level,2024-03-06
+Training & Development Assistant,SkillWorks,Hyderabad India,"Assist L&D team with training schedules, attendance tracking, and documentation.","Training, Communication, Excel, Documentation, MS Office",280000,380000,Full-time,Entry-level,2024-03-07
+Client Relationship Executive,ClientCare India,Mumbai India,"Manage client calls, documentation, follow-ups, and coordination.","Communication, Sales Support, Documentation, CRM Tools, MS Office",300000,450000,Full-time,Entry-level,2024-03-07

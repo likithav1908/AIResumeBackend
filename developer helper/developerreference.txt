@@ -1,0 +1,20 @@
+sudo dnf install make gcc -y
+
+du -sh ~/.cache/pip
+pip cache purge
+
+ chmod +x /home/jackwake1316/LJ/Project00001/arajms-backend/init_database.py
+
+//activate the .venv
+source .venv/bin/activate
+
+
+//access to db 
+ sqlite3 resume_database.db
+
+
+ //check db 
+ python check_db.py
+
+ //load jobs
+ python load_jobs.py

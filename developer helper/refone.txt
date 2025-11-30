@@ -1,0 +1,149 @@
+Here's how to access all the endpoints:
+
+## **🌐 Main Server URL**
+```
+http://localhost:5000
+```
+
+## **📋 Key Endpoints**
+
+### **🎯 Main Resume Processing**
+```bash
+# Upload resume PDF and get ATS + job matches
+curl -X POST -F "file=@resume.pdf" http://localhost:5000/upload-pdf
+```
+
+### **👥 User Management**
+```bash
+# Create user (optional - auto-created on first upload)
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "email": "john@example.com"}' \
+  http://localhost:5000/users
+
+# Get user info
+curl http://localhost:5000/users/1
+
+# Get user's resumes
+curl http://localhost:5000/users/1/resumes
+```
+
+### **📄 Resume Management**
+```bash
+# Get all resumes
+curl http://localhost:5000/resumes
+
+# Get specific resume
+curl http://localhost:5000/resumes/1
+
+# Search resumes by skills
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"skills": ["Python", "AWS"]}' \
+  http://localhost:5000/search/skills
+```
+
+### **💼 Job Management**
+```bash
+# Upload jobs from CSV
+curl -X POST -F "file=@jobs.csv" http://localhost:5000/jobs/feed
+
+# Get all jobs
+curl http://localhost:5000/jobs
+
+# Search jobs by skills
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"skills": ["Python", "React"]}' \
+  http://localhost:5000/jobs/search/skills
+```
+
+### **📊 ATS Analysis**
+```bash
+# Analyze resume with ATS
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"resume_id": 1}' \
+  http://localhost:5000/ats/analyze
+
+# Calculate ATS score only
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"resume_data": {...}}' \
+  http://localhost:5000/ats/score
+
+# Find matching jobs
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"resume_data": {...}, "limit": 10}' \
+  http://localhost:5000/ats/match-jobs
+```
+
+### **⚙️ System**
+```bash
+# Health check
+curl http://localhost:5000/health
+
+# Database statistics
+curl http://localhost:5000/stats
+
+# API documentation
+curl http://localhost:5000/
+```
+
+## **🚀 Quick Start**
+
+1. **Start Server:**
+```bash
+python server.py
+```
+
+2. **Upload Resume:**
+```bash
+curl -X POST -F "file=@your_resume.pdf" http://localhost:5000/upload-pdf
+```
+
+3. **View Results:**
+- **ATS Score**: Overall score and grade (A+ to F)
+- **Job Matches**: Top 10 matching jobs with percentages
+- **Recommendations**: Specific improvement suggestions
+
+## **📱 Frontend Integration**
+
+For frontend integration, use these endpoints:
+
+### **React/JavaScript Example:**
+```javascript
+// Upload resume
+const formData = new FormData();
+formData.append('file', resumeFile);
+
+const response = await fetch('http://localhost:5000/upload-pdf', {
+  method: 'POST',
+  body: formData
+});
+
+const result = await response.json();
+console.log(result.ats_analysis); // ATS scores + job matches
+```
+
+### **Python Example:**
+```python
+import requests
+
+# Upload resume
+with open('resume.pdf', 'rb') as f:
+    response = requests.post('http://localhost:5000/upload-pdf', files={'file': f})
+
+result = response.json()
+print(f"ATS Score: {result['ats_analysis']['ats_scores']['overall_score']}")
+print(f"Top Job: {result['ats_analysis']['summary']['top_job_title']}")
+```
+
+## **🔧 Testing Endpoints**
+
+### **Health Check:**
+```bash
+curl http://localhost:5000/health
+```
+
+### **API Info:**
+```bash
+curl http://localhost:5000/
+```
+
+The main endpoint you'll want to use is **`POST /upload-pdf`** - it processes the resume and returns everything: ATS score + job matches + recommendations!
